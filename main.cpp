@@ -27,15 +27,260 @@
 #define SEVEN "7"
 #define BAR "▃"
 
-//#define CHERRY "🍒"
-//#define LEMON "🍋"
-//#define ORANGE "🍊"
-//#define BELL "🔔"
-//#define STAR "⭐"
-//#define SEVEN "7"
-//#define BAR "▃"
-
 namespace games {
+    struct Card {
+        int value;
+        std::string suit;
+        std::string rank;
+    };
+
+    const char *card_template = R"(
+┌────────┐
+│%s      │
+│        │
+│   %s    │
+│        │
+│      %s│
+└───%s───┘
+)";
+
+    const char *hidden_card_template = R"(
+┌────────┐
+│░░░░░░░░│
+│░░░░░░░░│
+│░░░░░░░░│
+│░░░░░░░░│
+│░░░░░░░░│
+└────────┘
+)";
+
+    namespace baccarat {
+        const std::vector<Card> valid_cards = {
+                {2, SPADE, "2"}, {3, SPADE, "3"}, {4, SPADE, "4"}, {5, SPADE, "5"}, {6, SPADE, "6"},
+                {7, SPADE, "7"}, {8, SPADE, "8"}, {9, SPADE, "9"}, {10, SPADE, "10"}, {0, SPADE, "J"},
+                {0, SPADE, "Q"}, {0, SPADE, "K"}, {1, SPADE, "A"},
+
+                {2, HEART, "2"}, {3, HEART, "3"}, {4, HEART, "4"}, {5, HEART, "5"}, {6, HEART, "6"},
+                {7, HEART, "7"}, {8, HEART, "8"}, {9, HEART, "9"}, {10, HEART, "10"}, {0, HEART, "J"},
+                {0, HEART, "Q"}, {0, HEART, "K"}, {1, HEART, "A"},
+
+                {2, DIAMOND, "2"}, {3, DIAMOND, "3"}, {4, DIAMOND, "4"}, {5, DIAMOND, "5"}, {6, DIAMOND, "6"},
+                {7, DIAMOND, "7"}, {8, DIAMOND, "8"}, {9, DIAMOND, "9"}, {10, DIAMOND, "10"}, {0, DIAMOND, "J"},
+                {0, DIAMOND, "Q"}, {0, DIAMOND, "K"}, {1, DIAMOND, "A"},
+
+                {2, CLUB, "2"}, {3, CLUB, "3"}, {4, CLUB, "4"}, {5, CLUB, "5"}, {6, CLUB, "6"},
+                {7, CLUB, "7"}, {8, CLUB, "8"}, {9, CLUB, "9"}, {10, CLUB, "10"}, {0, CLUB, "J"},
+                {0, CLUB, "Q"}, {0, CLUB, "K"}, {1, CLUB, "A"}
+        };
+
+        std::vector<Card> deck;
+
+        std::string format_value(int value) {
+            if (value < 10) {
+                return std::to_string(value) + "─";
+            }
+            return std::to_string(value);
+        }
+
+        std::vector<std::string> create_card(const Card& card) {
+            std::array<char, 256> card_buffer;
+            std::string val = format_value(card.value);
+            std::string top_rank = card.rank;
+            std::string bottom_rank = card.rank;
+
+            if (card.rank.length() == 1) {
+                top_rank += " ";
+                bottom_rank = " " + bottom_rank;
+            }
+
+            std::snprintf(
+                    card_buffer.data(), card_buffer.size(),
+                    card_template,
+                    top_rank.c_str(), card.suit.c_str(), bottom_rank.c_str(), val.c_str());
+
+            std::vector<std::string> card_lines;
+            std::string card_str(card_buffer.data());
+            size_t pos = 0;
+            std::string line;
+            while ((pos = card_str.find('\n')) != std::string::npos) {
+                line = card_str.substr(0, pos);
+                if (!line.empty()) {
+                    card_lines.push_back(line);
+                }
+                card_str.erase(0, pos + 1);
+            }
+            if (!card_str.empty()) {
+                card_lines.push_back(card_str);
+            }
+            return card_lines;
+        }
+
+        Card draw_card() {
+            Card card = deck.back();
+            deck.pop_back();
+            return card;
+        }
+
+        void shuffle_deck() {
+            std::random_device rd;
+            std::mt19937 g(rd());
+
+            deck = valid_cards;
+            std::shuffle(deck.begin(), deck.end(), g);
+        }
+
+        void render_cards(const std::vector<Card>& cards) {
+            if (cards.empty()) return;
+
+            std::vector<std::vector<std::string>> all_card_lines;
+
+            for (size_t i = 0; i < cards.size(); ++i) {
+                all_card_lines.push_back(create_card(cards[i]));
+            }
+
+            for (size_t line = 0; line < all_card_lines[0].size(); ++line) {
+                for (const auto& card_lines : all_card_lines) {
+                    std::cout << card_lines[line] << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+
+        int calculate_score(const std::vector<Card>& hand) {
+            int score = 0;
+            for (const auto& card : hand) {
+                score += card.value;
+            }
+            return score % 10;
+        }
+
+        bool game_main() {
+            std::cout << CLEAR;
+
+            std::cout
+                    << YELLOW << "[?] Shuffling the deck...\n" << RESET;
+
+            shuffle_deck();
+            std::cout
+                    << GREEN << "[i] The deck has been shuffled!\n" << RESET
+                    << std::endl;
+
+            std::vector<Card> banker_hand = {draw_card(), draw_card()};
+            std::vector<Card> player_hand = {draw_card(), draw_card()};
+
+            bool player_turn = true;
+            while (player_turn) {
+                int choice;
+                std::cout
+                        << "What would you like to do?\n"
+                        << YELLOW << "[1] " << RESET << "Bet on Player\n"
+                        << YELLOW << "[2] " << RESET << "Bet on Banker\n"
+                        << YELLOW << "[3] " << RESET << "Bet on Tie\n"
+                        << BLUE << "> " << RESET;
+
+                std::cin >> choice;
+                std::cout << CLEAR;
+                switch(choice) {
+                    case 1: {
+                        std::cout
+                            << RED << "Banker's Hand: \n";
+                        render_cards(banker_hand);
+
+                        std::cout
+                            << GREEN << "Player's Hand: \n";
+                        render_cards(player_hand);
+
+                        int player_score = calculate_score(player_hand);
+                        int banker_score = calculate_score(banker_hand);
+                        if (player_score > banker_score) {
+                            std::cout
+                                << GREEN << "You win! Your score is " << BLUE << player_score
+                                << GREEN << " and the banker's score is " << BLUE << banker_score
+                                << GREEN << ".\n" << RESET;
+
+                            return true;
+                        } else {
+                            std::cout
+                                << RED << "You lost. Your score is " << BLUE << player_score
+                                << RED << " and the banker's score is " << BLUE << banker_score
+                                << RED << ".\n" << RESET;
+
+                            return false;
+                        }
+
+                        break;
+                    }
+
+                    case 2: {
+                        std::cout
+                                << RED << "Banker's Hand: \n";
+                        render_cards(banker_hand);
+
+                        std::cout
+                                << GREEN << "Player's Hand: \n";
+                        render_cards(player_hand);
+
+                        int player_score = calculate_score(player_hand);
+                        int banker_score = calculate_score(banker_hand);
+                        if (banker_score > player_score) {
+                            std::cout
+                                << GREEN << "You win! Your score is " << BLUE << player_score
+                                << GREEN << " and the banker's score is " << BLUE << banker_score
+                                << GREEN << ".\n" << RESET;
+
+                            return true;
+                        } else {
+                            std::cout
+                                << RED << "You lost. Your score is " << BLUE << player_score
+                                << RED << " and the banker's score is " << BLUE << banker_score
+                                << RED << ".\n" << RESET;
+
+                            return false;
+                        }
+                        break;
+                    }
+
+                    case 3: {
+                        std::cout
+                                << RED << "Banker's Hand: \n";
+                        render_cards(banker_hand);
+
+                        std::cout
+                                << GREEN << "Player's Hand: \n";
+                        render_cards(player_hand);
+
+                        int player_score = calculate_score(player_hand);
+                        int banker_score = calculate_score(banker_hand);
+                        if (player_score == banker_score) {
+                            std::cout
+                                << GREEN << "You win! Your score is " << BLUE << player_score
+                                << GREEN << " and the banker's score is " << BLUE << banker_score
+                                << GREEN << ".\n" << RESET;
+
+                            return true;
+                        } else {
+                            std::cout
+                                << RED << "You lost. Your score is " << BLUE << player_score
+                                << RED << " and the banker's score is " << BLUE << banker_score
+                                << RED << ".\n" << RESET;
+
+                            return false;
+                        }
+                        break;
+                    }
+
+                    default: {
+                        std::cout
+                                << RED << "Invalid choice. Please try again.\n" << RESET;
+                        break;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
     namespace slots {
         const char *slot_template = R"(
 ┌─────┬─────┬─────┐
@@ -78,32 +323,6 @@ namespace games {
         }
     }
     namespace blackjack {
-        const char *card_template = R"(
-┌────────┐
-│%s      │
-│        │
-│   %s    │
-│        │
-│      %s│
-└───%s───┘
-)";
-
-        const char *hidden_card_template = R"(
-┌────────┐
-│░░░░░░░░│
-│░░░░░░░░│
-│░░░░░░░░│
-│░░░░░░░░│
-│░░░░░░░░│
-└────────┘
-)";
-
-        struct Card {
-            int value;
-            std::string suit;
-            std::string rank;
-        };
-
         const std::vector<Card> valid_cards = {
                 {2, SPADE, "2"},
                 {3, SPADE, "3"},
@@ -522,6 +741,7 @@ const std::vector<std::string> menu = {
         "Roulette",
         "Slots",
         "Blackjack",
+        "Baccarat",
         "Exit"
 };
 
@@ -590,6 +810,12 @@ int main() {
             }
 
             case 5: {
+                games::baccarat::game_main();
+                await_resume();
+                break;
+            }
+
+            case 6: {
                 std::cout
                         << CLEAR
                         << GREEN << "\nThanks for playing! Goodbye!\n" << RESET;
