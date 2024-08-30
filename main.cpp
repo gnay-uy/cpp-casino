@@ -4,6 +4,7 @@
 #include <array>
 #include <algorithm>
 #include <thread>
+#include <iomanip>
 
 //-----[[ COLOUR CONTROL ]]-----//
 #define RESET "\x1b[0m"
@@ -26,6 +27,30 @@
 #define STAR "\u2B50"
 #define SEVEN "7"
 #define BAR "▃"
+
+struct Stats {
+    int wins = 0;
+    int losses = 0;
+    int draws = 0;
+
+    double win_rate() const {
+        return (wins + losses + draws) ? (double) wins / (wins + losses + draws) * 100 : 0.0;
+    }
+
+    double loss_rate() const {
+        return (wins + losses + draws) ? (double) losses / (wins + losses + draws) * 100 : 0.0;
+    }
+
+    double draw_rate() const {
+        return (wins + losses + draws) ? (double) draws / (wins + losses + draws) * 100 : 0.0;
+    }
+};
+
+enum class Outcome {
+    WIN,
+    LOSE,
+    DRAW
+};
 
 namespace games {
     struct Card {
@@ -154,7 +179,7 @@ namespace games {
             return score % 10;
         }
 
-        bool game_main() {
+        Outcome game_main() {
             std::cout << CLEAR;
 
             std::cout
@@ -198,14 +223,14 @@ namespace games {
                                 << GREEN << " and the banker's score is " << BLUE << banker_score
                                 << GREEN << ".\n" << RESET;
 
-                            return true;
+                            return Outcome::WIN;
                         } else {
                             std::cout
                                 << RED << "You lost. Your score is " << BLUE << player_score
                                 << RED << " and the banker's score is " << BLUE << banker_score
                                 << RED << ".\n" << RESET;
 
-                            return false;
+                            return Outcome::LOSE;
                         }
 
                         break;
@@ -228,14 +253,14 @@ namespace games {
                                 << GREEN << " and the banker's score is " << BLUE << banker_score
                                 << GREEN << ".\n" << RESET;
 
-                            return true;
+                            return Outcome::WIN;
                         } else {
                             std::cout
                                 << RED << "You lost. Your score is " << BLUE << player_score
                                 << RED << " and the banker's score is " << BLUE << banker_score
                                 << RED << ".\n" << RESET;
 
-                            return false;
+                            return Outcome::LOSE;
                         }
                         break;
                     }
@@ -257,14 +282,14 @@ namespace games {
                                 << GREEN << " and the banker's score is " << BLUE << banker_score
                                 << GREEN << ".\n" << RESET;
 
-                            return true;
+                            return Outcome::WIN;
                         } else {
                             std::cout
                                 << RED << "You lost. Your score is " << BLUE << player_score
                                 << RED << " and the banker's score is " << BLUE << banker_score
                                 << RED << ".\n" << RESET;
 
-                            return false;
+                            return Outcome::LOSE;
                         }
                         break;
                     }
@@ -277,7 +302,7 @@ namespace games {
                 }
             }
 
-            return false;
+            return Outcome::LOSE;
         }
     }
 
@@ -311,7 +336,7 @@ namespace games {
             return reels;
         }
 
-        bool game_main() {
+        Outcome game_main() {
             std::vector<std::vector<std::string>> reels = make_reels();
 
             for (size_t i = 0; i < reels[0].size(); ++i) {
@@ -319,7 +344,7 @@ namespace games {
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
             }
 
-            return false;
+            return Outcome::LOSE;
         }
     }
     namespace blackjack {
@@ -487,7 +512,7 @@ namespace games {
             }
         }
 
-        bool game_main() {
+        Outcome game_main() {
             std::cout << CLEAR;
             int dealer_score;
             int player_score;
@@ -555,7 +580,7 @@ namespace games {
                                     << RED << "\n\nYou busted! Your score is "
                                     << BLUE << score
                                     << RED << ".\n" << RESET;
-                            return false;
+                            return Outcome::LOSE;
                         }
 
                         std::cout
@@ -603,7 +628,7 @@ namespace games {
                     << GREEN << " and the dealer's score is "
                     << BLUE << dealer_score
                     << GREEN << ".\n" << RESET;
-                return true;
+                return Outcome::WIN;
             }
 
             bool dealer_turn = true;
@@ -633,7 +658,7 @@ namespace games {
                             << GREEN << "\n\nYou win! Dealer busted! Their score is "
                             << BLUE << score
                             << GREEN << ".\n" << RESET;
-                        return true;
+                        return Outcome::WIN;
                     }
                 }
             }
@@ -658,7 +683,7 @@ namespace games {
                     << GREEN << " and the dealer's score is "
                     << BLUE << dealer_score
                     << GREEN << ".\n" << RESET;
-                return true;
+                return Outcome::WIN;
             } else if (dealer_score > player_score) {
                 std::cout
                     << RED << "\n\nYou lost. Your score is "
@@ -666,7 +691,7 @@ namespace games {
                     << RED << " and the dealer's score is "
                     << BLUE << dealer_score
                     << RED << ".\n" << RESET;
-                return false;
+                return Outcome::LOSE;
             } else if (dealer_score == player_score) {
                 std::cout
                     << GREEN << "\n\nIt's a tie! Your score is "
@@ -674,15 +699,15 @@ namespace games {
                     << GREEN << " and the dealer's score is "
                     << BLUE << dealer_score
                     << GREEN << ".\n" << RESET;
-                return true;
+                return Outcome::DRAW;
             }
 
-            return false;
+            return Outcome::LOSE;
         }
     }
 
     namespace guess_the_number {
-        bool game_main() {
+        Outcome game_main() {
             std::cout << CLEAR;
             short winning_number;
             short guess;
@@ -721,7 +746,7 @@ namespace games {
                 std::cout
                         << GREEN << "\n\nCongratulations! You guessed the number!\n" << RESET;
 
-                return true;
+                return Outcome::WIN;
             } else {
                 std::cout
                         << RED << "\n\nYou lost. "
@@ -729,7 +754,7 @@ namespace games {
                         << BLUE << winning_number
                         << GREEN << ".\n" << RESET;
 
-                return false;
+                return Outcome::LOSE;
             }
         }
     }
@@ -742,15 +767,15 @@ const std::vector<std::string> menu = {
         "Slots",
         "Blackjack",
         "Baccarat",
+        "View Winrate",
         "Exit"
 };
 
 int get_menu_choice(const std::vector<std::string> &choices) {
     std::cout
             << RED <<   "==============================\n" << RESET
-            << RED <<   "||  Welcome to the Casino!  ||\n" << RESET
-            << RED <<   "==============================\n" << RESET
-            << std::endl;
+            << RED <<   "||   Welcome to gambling!   ||\n" << RESET
+            << RED <<   "==============================\n" << RESET;
 
     int choice;
     int idx = 0;
@@ -781,6 +806,7 @@ void await_resume() {
 }
 
 int main() {
+    Stats stats;
     while (true) {
         std::cout << CLEAR;
 
@@ -788,7 +814,23 @@ int main() {
 
         switch (choice) {
             case 1: {
-                games::guess_the_number::game_main();
+                switch (games::guess_the_number::game_main()) {
+                    case Outcome::WIN: {
+                        stats.wins++;
+                        break;
+                    }
+
+                    case Outcome::LOSE: {
+                        stats.losses++;
+                        break;
+                    }
+
+                    case Outcome::DRAW: {
+                        stats.draws++;
+                        break;
+                    }
+                }
+
                 await_resume();
                 break;
             }
@@ -798,24 +840,88 @@ int main() {
             }
 
             case 3: {
-                games::slots::game_main();
+                switch (games::slots::game_main()) {
+                    case Outcome::WIN: {
+                        stats.wins++;
+                        break;
+                    }
+
+                    case Outcome::LOSE: {
+                        stats.losses++;
+                        break;
+                    }
+
+                    case Outcome::DRAW: {
+                        stats.draws++;
+                        break;
+                    }
+                }
+
                 await_resume();
                 break;
             }
 
             case 4: {
-                games::blackjack::game_main();
+                switch (games::blackjack::game_main()) {
+                    case Outcome::WIN: {
+                        stats.wins++;
+                        break;
+                    }
+
+                    case Outcome::LOSE: {
+                        stats.losses++;
+                        break;
+                    }
+
+                    case Outcome::DRAW: {
+                        stats.draws++;
+                        break;
+                    }
+                }
+
                 await_resume();
                 break;
             }
 
             case 5: {
-                games::baccarat::game_main();
+                switch (games::baccarat::game_main()) {
+                    case Outcome::WIN: {
+                        stats.wins++;
+                        break;
+                    }
+
+                    case Outcome::LOSE: {
+                        stats.losses++;
+                        break;
+                    }
+
+                    case Outcome::DRAW: {
+                        stats.draws++;
+                        break;
+                    }
+                }
+
                 await_resume();
                 break;
             }
 
             case 6: {
+                std::cout << CLEAR;
+                std::cout
+                    << RED <<   "==============================\n" << RESET
+                    << RED <<   "||    Session Statistics    ||\n" << RESET
+                    << RED <<   "==============================\n" << RESET;
+
+                std::cout
+                    << GREEN << "Wins: " << stats.wins << " (" << std::fixed << std::setprecision(2) << stats.win_rate() << "%)\n" << RESET
+                    << RED << "Losses: " << stats.losses << " (" << std::fixed << std::setprecision(2) << stats.loss_rate() << "%)\n" << RESET
+                    << YELLOW << "Draws: " << stats.draws << " (" << std::fixed << std::setprecision(2) << stats.draw_rate() << "%)\n" << RESET;
+
+                await_resume();
+                break;
+            }
+
+            case 7: {
                 std::cout
                         << CLEAR
                         << GREEN << "\nThanks for playing! Goodbye!\n" << RESET;
